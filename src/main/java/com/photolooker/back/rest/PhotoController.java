@@ -1,49 +1,46 @@
 package com.photolooker.back.rest;
 
 import com.photolooker.back.domain.ImageInfos;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpStatus;
+import com.photolooker.back.infra.ImageKitStoreService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import javax.annotation.PostConstruct;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @RestController
+@Configuration
+@Component
+@PropertySource("classpath:application.yml")
 @CrossOrigin(origins = "*", allowedHeaders = "*")
 public class PhotoController {
 
-    @GetMapping("/hello")
-    public List<ImageInfos> getImages() throws IOException {
-        try (Stream stream = Files.list(Paths.get("/Users/senred/Documents/photos/Z 50 7805382/DCIM/100NZ_50"))) {
-            return (List<ImageInfos>) stream
-                    .map(o -> new ImageInfos((Path) o))
-                    .collect(Collectors.toList());
-        }
+
+    private List<ImageInfos> allImages;
+
+    @Autowired
+    private ImageKitStoreService imageKitStore;
+
+    @PostConstruct
+    public void fetchImagesMeta(){
+        this.allImages = imageKitStore.getAllImagesMeta();
     }
 
-    @GetMapping(value = "/imqsdqsdages/{name}",produces = MediaType.IMAGE_JPEG_VALUE)
-    public byte[] getImage(@PathVariable String name) throws IOException {
-        Path filePath = Paths.get("/Users/senred/Documents/photos/Z 50 7805382/DCIM/100NZ_50/"+name);
-        return Files.readAllBytes(filePath);
+    @GetMapping("/images")
+    public List<ImageInfos> getImages() {
+        return this.allImages;
     }
 
-    @GetMapping(value = "/images/{name}", produces = MediaType.IMAGE_JPEG_VALUE)
-    public ResponseEntity<Resource> image(@PathVariable String name) throws IOException {
-        final ByteArrayResource inputStream = new ByteArrayResource(Files.readAllBytes(Paths.get(
-                "/Users/senred/Documents/photos/Z 50 7805382/DCIM/100NZ_50/"+name
-        )));
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .contentLength(inputStream.contentLength())
-                .body(inputStream);
-
+    @PostMapping(value = "/{name}",produces = MediaType.IMAGE_JPEG_VALUE)
+    public void validateImage(@PathVariable String name) throws ImageNotFoundException {
+        final ImageInfos validatedImage = this.allImages.stream()
+                .filter(image -> image.getName().equals(name))
+                .findFirst()
+                .orElseThrow(ImageNotFoundException::new);
+        validatedImage.validate();
     }
 }

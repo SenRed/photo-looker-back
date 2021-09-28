@@ -3,16 +3,16 @@ package com.photolooker.back.domain;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
-import java.nio.file.Path;
-
 @Getter
 @AllArgsConstructor
 public class ImageInfos {
     private final String name;
-    private final ImageStatus status;
+    private final String originalImageURL;
+    private final String thumbedImageURL;
+    private ImageStatus status;
 
-    public ImageInfos(Path o) {
-        this.name = o.getFileName().toString();
-        this.status = ImageStatus.NA;
+    public void validate(){
+        this.status = ImageStatus.OK;
     }
+
 }
